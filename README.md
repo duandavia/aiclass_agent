@@ -23,9 +23,9 @@ bs4\\
 
 结构：round-robin-team，按照上述顺序
 
-模型：deepseek-r1，api用main.py中给的api-key
+模型：deepseek-r1，api用needed_api中给的api-key
 
-检索：麻烦负责检索开发的同学自己解决检索api和密钥了（x
+检索：麻烦负责检索开发的同学自己解决检索api和密钥了（x）相应的api和密钥建议放到`needed_api.env`中。
 
 输出记录：可以考虑在前端流式输出，也可以使用logging方法输出日志
 
