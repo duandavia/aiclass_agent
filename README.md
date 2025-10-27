@@ -33,7 +33,8 @@
 *参考文档：https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/examples/company-research.html*
 
 具体开发建议：
-前端和数据接口：前端主要关注AI输出的`result`变量的显示和用户输入的`task`变量；数据接口同学只关注这两个变量即可。
+
+前端和数据接口：前端主要关注AI输出的`result`变量的显示和用户输入的`task`变量的显示；数据接口同学只关注这两个变量即可，其中`task`传到后端，`result`发到前端。
 
 任务解析智能体：创建一个agent，开发一个配套的搜索函数作为tool封装，提示词参考：`f"使用所提供的tool检索信息，告诉我符合用户所描述的特征的股票名称，不需要其他信息和文字。"`
 
