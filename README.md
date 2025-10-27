@@ -30,7 +30,23 @@
 ## 大作业完成计划
 多智能体任务：搜索指定范围内的股票价格，作折线图，并对搜索到的结果发表评论，最后把所有内容进行整合输出。
 
-*参考文档：https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/examples/company-research.html* *(基本照抄了属于是)*
+*参考文档：https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/examples/company-research.html*
+
+具体开发建议：
+前端和数据接口：前端主要关注AI输出的`result`变量的显示和用户输入的`task`变量；数据接口同学只关注这两个变量即可。
+
+任务解析智能体：创建一个agent，开发一个配套的搜索函数作为tool封装，提示词参考：`f"使用所提供的tool检索信息，告诉我符合用户所描述的特征的股票名称，不需要其他信息和文字。"`
+
+搜索智能体：创建一个agent，开发一个配套的搜索函数作为tool封装，提示词参考：`f"根据已知的股票名称，使用所提供的tool检索信息，告诉我这只股票在用户指令中指定的市场里的完整检索代码，不需要其他信息和文字。"`
+*搜索函数需要麻烦各位自己解决搜索api及密钥*
+
+制图智能体：创建一个agent，参考（可照抄）文档内容，开发一个配套的数据查询和制图函数，作为tool封装，提示词参考：`"进行数据分析。"`
+
+评论智能体：创建一个agent，描述（description），提示词（system_message）可参考（照抄）文档中report_agent的描述。
+
+输出智能体：创建一个agent，开发一个配套的输出函数作为tool封装，把制图智能体出的图和评论智能体输出的分析内容输出到文件中。
+
+测试脚本和测试人员：注意我们使用的`yfinance`库不支持国内股市，如果可以的话建议编写测试指令时聚焦港股、美股等国外市场的股票。
 
 智能体配置：任务解析智能体、搜索智能体、制图智能体、评论智能体、整合输出智能体
 
