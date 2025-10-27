@@ -1,0 +1,285 @@
+import os
+import json
+from datetime import datetime
+from typing import Dict, Any
+from dotenv import load_dotenv
+import autogen
+
+
+def save_report_tool(
+        chart_data: str = "",
+        analysis_content: str = "",
+        stock_data: str = "",
+        output_format: str = "html"
+) -> str:
+    """
+    将图表和分析内容保存到文件的工具函数
+
+    Args:
+        chart_data: 图表数据或图表文件路径
+        analysis_content: 分析评论内容
+        stock_data: 股票数据
+        output_format: 输出格式 (markdown/html)
+
+    Returns:
+        str: 保存的文件路径
+    """
+
+    # 创建输出目录
+    output_dir = "output/reports"
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 生成文件名
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"stock_analysis_report_{timestamp}"
+
+    if output_format == "html":
+        filename += ".html"
+        filepath = os.path.join(output_dir, filename)
+
+        # 生成HTML报告
+        html_content = generate_html_report(stock_data, chart_data, analysis_content)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+
+    else:  # markdown格式
+        filename += ".md"
+        filepath = os.path.join(output_dir, filename)
+
+        # 生成Markdown报告
+        md_content = generate_markdown_report(stock_data, chart_data, analysis_content)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(md_content)
+
+    print(f"报告已保存到: {filepath}")
+    return filepath
+
+
+def generate_markdown_report(stock_data: str, chart_data: str, analysis: str) -> str:
+    """生成Markdown格式的报告"""
+
+    # 解析数据（在实际应用中，这些数据会是结构化的）
+    stock_info = extract_stock_info(stock_data)
+    chart_info = extract_chart_info(chart_data)
+    analysis_info = extract_analysis_info(analysis)
+
+    report = f"""# 股票分析报告
+
+## 股票信息
+- **股票代码**: {stock_info.get('symbol', 'AAPL')}
+- **分析时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+- **数据周期**: {stock_info.get('period', '2024年1月')}
+
+## 价格数据
+{stock_info.get('data_summary', '')}
+
+## 图表信息
+{chart_info.get('description', '')}
+
+**图表文件**: `{chart_info.get('path', '')}`
+
+## 专业分析
+### 走势分析
+{analysis_info.get('analysis', '')}
+
+### 投资建议
+{analysis_info.get('recommendation', '')}
+
+## 总结
+本报告由多智能体系统自动生成，包含股票数据收集、图表制作和专业分析三个主要环节。
+
+---
+*生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
+"""
+    return report
+
+
+def generate_html_report(stock_data: str, chart_data: str, analysis: str) -> str:
+    """生成HTML格式的报告"""
+
+    stock_info = extract_stock_info(stock_data)
+    chart_info = extract_chart_info(chart_data)
+    analysis_info = extract_analysis_info(analysis)
+
+    html_report = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票分析报告</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }}
+        .header {{ border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }}
+        .section {{ margin-bottom: 30px; }}
+        .section h2 {{ color: #2c3e50; border-left: 4px solid #3498db; padding-left: 10px; }}
+        .info-item {{ margin: 10px 0; }}
+        .analysis {{ background: #f8f9fa; padding: 20px; border-radius: 5px; }}
+        .recommendation {{ background: #e8f5e8; padding: 15px; border-radius: 5px; }}
+        .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>股票分析报告</h1>
+        <p>自动生成的专业股票分析报告</p>
+    </div>
+
+    <div class="section">
+        <h2>股票信息</h2>
+        <div class="info-item"><strong>股票代码:</strong> {stock_info.get('symbol', 'AAPL')}</div>
+        <div class="info-item"><strong>分析时间:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
+        <div class="info-item"><strong>数据周期:</strong> {stock_info.get('period', '2024年1月')}</div>
+    </div>
+
+    <div class="section">
+        <h2>价格数据</h2>
+        <pre>{stock_info.get('data_summary', '')}</pre>
+    </div>
+
+    <div class="section">
+        <h2>图表信息</h2>
+        <p>{chart_info.get('description', '')}</p>
+        <p><strong>图表文件:</strong> <code>{chart_info.get('path', '')}</code></p>
+    </div>
+
+    <div class="section">
+        <h2>专业分析</h2>
+        <div class="analysis">
+            <h3>走势分析</h3>
+            <p>{analysis_info.get('analysis', '')}</p>
+        </div>
+        <div class="recommendation">
+            <h3>投资建议</h3>
+            <p>{analysis_info.get('recommendation', '')}</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>本报告由多智能体系统自动生成</p>
+        <p>生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    </div>
+</body>
+</html>"""
+    return html_report
+
+
+def extract_stock_info(stock_data: str) -> Dict[str, Any]:
+    """从股票数据中提取信息"""
+    try:
+        if isinstance(stock_data, str) and stock_data.strip():
+            # 尝试解析JSON格式的股票数据
+            if stock_data.startswith('{'):
+                data = json.loads(stock_data)
+                return {
+                    'symbol': data.get('stock', 'AAPL'),
+                    'period': '自定义周期',
+                    'data_summary': f"包含{len(data.get('prices', []))}个价格数据点"
+                }
+    except:
+        pass
+
+    return {
+        'symbol': 'AAPL',
+        'period': '2024年1月',
+        'data_summary': '模拟股票价格数据'
+    }
+
+
+def extract_chart_info(chart_data: str) -> Dict[str, Any]:
+    """从图表数据中提取信息"""
+    if isinstance(chart_data, str) and chart_data.strip():
+        if chart_data.startswith('{'):
+            try:
+                data = json.loads(chart_data)
+                return {
+                    'path': data.get('chart_path', 'output/chart.png'),
+                    'description': data.get('chart_description', '股票价格走势图')
+                }
+            except:
+                pass
+
+    return {
+        'path': 'output/stock_chart.png',
+        'description': 'AAPL股票价格走势折线图'
+    }
+
+
+def extract_analysis_info(analysis: str) -> Dict[str, Any]:
+    """从分析内容中提取信息"""
+    if isinstance(analysis, str) and analysis.strip():
+        if analysis.startswith('{'):
+            try:
+                data = json.loads(analysis)
+                return {
+                    'analysis': data.get('analysis', '专业的股票走势分析'),
+                    'recommendation': data.get('recommendation', '投资建议')
+                }
+            except:
+                pass
+
+    return {
+        'analysis': analysis if analysis else '基于价格数据的专业分析',
+        'recommendation': '请根据个人风险承受能力做出投资决策'
+    }
+
+
+def get_deepseek_llm_config() -> Dict[str, Any]:
+    """
+    配置用于调用 DeepSeek 模型的 llm_config
+    """
+    load_dotenv()
+    # 从环境变量获取 API Key
+    api_key = os.getenv("Deepseek_API_KEY")
+
+
+    llm_config = {
+        "config_list": [
+            {
+                "model": "deepseek-reasoner",
+                "api_key": api_key,
+                "base_url": "https://api.deepseek.com",
+                "api_type": "open_ai",
+            }
+        ],
+        "temperature": 0.1,
+        "timeout": 120,
+    }
+    return llm_config
+
+def create_output_agent(llm_config: Dict[str, Any]) -> autogen.AssistantAgent:
+    """
+    创建输出智能体
+
+    Args:
+        llm_config: 语言模型配置
+
+    Returns:
+        OutputAgent实例
+    """
+
+    output_agent = autogen.AssistantAgent(
+        name="OutputAgent",
+        system_message="""你是一个专业的报告输出智能体。你的职责是：
+
+        1. 收集整理所有智能体的输出结果
+        2. 调用save_report工具将内容保存到文件
+        3. 确保报告的完整性和格式正确
+        4. 支持多种输出格式（markdown/html）
+
+        当收到其他智能体的完整输出后，你应该：
+        - 确认所有必要信息都已收集（股票数据、图表信息、分析内容）
+        - 调用save_report工具
+        - 返回生成的文件路径
+
+        重要：确保在调用工具时提供清晰的结构化信息。
+        """,
+        llm_config=llm_config,
+    )
+
+    return output_agent
+
+
+# 工具函数映射（用于AutoGen注册）
+function_map = {
+    "save_report": save_report_tool
+}
