@@ -137,7 +137,7 @@ def create_search_agent():
         model_client=model_client,
         tools=[common_search_tool],
         description="搜索相关股票在市场中的完整检索代码，公司信息以及股价",
-        system_message="You are a helpful AI assistant. Solve tasks using your tools.",
+        system_message="你是一个搜索智能体，你需要根据输入的股票名称，搜索该股票在指定的市场中的完整检索代码，不需要其他信息和文字。",
     )
     return search_agent
 
@@ -146,7 +146,7 @@ async def main():                      # 1. 包成异步函数
     '''search_result = common_search("123")
     print(search_result)'''
     search_agent = create_search_agent()
-    result = await search_agent.run(task="Find information on AutoGen")
+    result = await search_agent.run(task="搜索一支叫茅台的股票")
     print(result)
 
 if __name__ == "__main__":
