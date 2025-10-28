@@ -2,11 +2,13 @@ import os
 import json
 from datetime import datetime
 from typing import Dict, Any
-from dotenv import load_dotenv
-import autogen
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+from autogen_agentchat.agents import AssistantAgent
+from autogen_core.memory import ListMemory
+from autogen_core.tools import FunctionTool
 
 
-def save_report_tool(
+def save_report(
         chart_data: str = "",
         analysis_content: str = "",
         stock_data: str = "",
@@ -26,7 +28,7 @@ def save_report_tool(
     """
 
     # 创建输出目录
-    output_dir = "output/reports"
+    output_dir = "./output/reports"
     os.makedirs(output_dir, exist_ok=True)
 
     # 生成文件名
@@ -223,41 +225,21 @@ def extract_analysis_info(analysis: str) -> Dict[str, Any]:
     }
 
 
-def get_deepseek_llm_config() -> Dict[str, Any]:
-    """
-    配置用于调用 DeepSeek 模型的 llm_config
-    """
-    load_dotenv()
-    # 从环境变量获取 API Key
-    api_key = os.getenv("Deepseek_API_KEY")
-
-
-    llm_config = {
-        "config_list": [
-            {
-                "model": "deepseek-reasoner",
-                "api_key": api_key,
-                "base_url": "https://api.deepseek.com",
-                "api_type": "open_ai",
-            }
-        ],
-        "temperature": 0.1,
-        "timeout": 120,
-    }
-    return llm_config
-
-def create_output_agent(llm_config: Dict[str, Any]) -> autogen.AssistantAgent:
+def create_output_agent(llm_model: OpenAIChatCompletionClient, memory: ListMemory) -> AssistantAgent:
     """
     创建输出智能体
 
     Args:
-        llm_config: 语言模型配置
+        llm_model: 语言模型实例
+        memory: 团队使用的记忆实例
 
     Returns:
         OutputAgent实例
     """
+    # 工具函数映射（用于AutoGen注册）
+    save_report_tool = FunctionTool(save_report, description="根据已有的分析结果，输出分析内容到文件中。")
 
-    output_agent = autogen.AssistantAgent(
+    output_agent = AssistantAgent(
         name="OutputAgent",
         system_message="""你是一个专业的报告输出智能体。你的职责是：
 
@@ -273,13 +255,9 @@ def create_output_agent(llm_config: Dict[str, Any]) -> autogen.AssistantAgent:
 
         重要：确保在调用工具时提供清晰的结构化信息。
         """,
-        llm_config=llm_config,
+        model_client=llm_model,
+        tools=[save_report_tool],
+        memory=[memory]
     )
 
     return output_agent
-
-
-# 工具函数映射（用于AutoGen注册）
-function_map = {
-    "save_report": save_report_tool
-}
