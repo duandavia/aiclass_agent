@@ -1,6 +1,8 @@
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.conditions import TextMentionTermination
 from autogen_agentchat.teams import RoundRobinGroupChat
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+from autogen_core.memory import ListMemory
 from autogen_agentchat.ui import Console
 from autogen_core.tools import FunctionTool
 import asyncio
@@ -125,9 +127,8 @@ def common_search(query: str, num_results: int = 2, max_chars: int = 500) -> lis
     return enriched_results
 
 
-def create_search_agent():
-    from autogen_ext.models.openai import OpenAIChatCompletionClient
-    model_client = OpenAIChatCompletionClient(model="gpt-4o", api_key="sk-NIu5GsfVbHxF3XH9dAQ9ZfxFnXpXw0XK2Pr4TPeJIyJI8BLo", base_url="https://api.chatanywhere.tech/v1")
+def create_search_agent(model_client: OpenAIChatCompletionClient, memory: ListMemory):
+    # model_client = OpenAIChatCompletionClient(model="gpt-4o", api_key="sk-NIu5GsfVbHxF3XH9dAQ9ZfxFnXpXw0XK2Pr4TPeJIyJI8BLo", base_url="https://api.chatanywhere.tech/v1")
     common_search_tool = FunctionTool(
         common_search, description="Search Google for information, returns results with a snippet and body content"
     )
@@ -136,6 +137,7 @@ def create_search_agent():
         name="Search_Agent",
         model_client=model_client,
         tools=[common_search_tool],
+        memory=[memory],
         description="搜索相关股票在市场中的完整检索代码，公司信息以及股价",
         system_message="你是一个搜索智能体，你需要根据输入的股票名称，搜索该股票在指定的市场中的完整检索代码，不需要其他信息和文字。",
     )

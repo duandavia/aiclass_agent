@@ -7,6 +7,7 @@ import os
 from dotenv import load_dotenv
 import asyncio
 import output_agent
+import search_agent
 
 load_dotenv()
 
@@ -28,8 +29,9 @@ model_client = OpenAIChatCompletionClient(
 team_memory = ListMemory()
 
 OutputAgent = output_agent.create_output_agent(model_client, team_memory)
+SearchAgent = search_agent.create_search_agent(model_client, team_memory)
 
-team = RoundRobinGroupChat([OutputAgent],max_turns=5)
+team = RoundRobinGroupChat([SearchAgent, OutputAgent],max_turns=5)
 
 async def run_team(task, team):
     stream = team.run_stream(task=task)
