@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import asyncio
 import output_agent
 import search_agent
+import plotting_agent
 import report_agent
 
 load_dotenv()
@@ -31,9 +32,10 @@ team_memory = ListMemory()
 #创建各个智能体
 OutputAgent = output_agent.create_output_agent(model_client, team_memory)
 SearchAgent = search_agent.create_search_agent(model_client, team_memory)
+PlottingAgent = plotting_agent.create_plotting_agent(model_client, team_memory)
 ReportAgent = report_agent.create_report_agent(model_client, team_memory)
 # 创建团队
-agent_team = RoundRobinGroupChat([SearchAgent, ReportAgent, OutputAgent], max_turns=5)
+agent_team = RoundRobinGroupChat([SearchAgent, PlottingAgent, ReportAgent, OutputAgent], max_turns=6)
 # 异步运行团队
 async def test_team():
     eg_task = "分析一下港股恒生指数的走势"
