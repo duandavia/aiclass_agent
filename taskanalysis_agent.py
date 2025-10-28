@@ -73,17 +73,17 @@ def common_search(query: str, num_results: int = 2, max_chars: int = 500) -> lis
     return enriched_results
 
 
-def create_search_agent():
-    model_client = OpenAIChatCompletionClient(model="deepseek-chat", api_key="sk-d9820c8127c8428e9ee59a01fcd8e116", base_url="https://api.deepseek.com/v1")
+def create_analysis_agent(model_client: OpenAIChatCompletionClient, memory: ListMemory):
+    # model_client = OpenAIChatCompletionClient(model="deepseek-chat", api_key="sk-d9820c8127c8428e9ee59a01fcd8e116", base_url="https://api.deepseek.com/v1")
     common_search_tool = FunctionTool(
         common_search, description="Search Google for information, returns results with a snippet and body content"
     )
 
     search_agent = AssistantAgent(
-        name="Search_Agent",
+        name="Task_Analysis_Agent",
         model_client=model_client,
         tools=[common_search_tool],
-        #memory=[memory],
+        memory=[memory],
         description="搜索符合用户所描述的特征的股票名称",
         system_message="你是一个任务解析智能体，你需要根据用户所描述的股票特征，搜索出符合的股票名称，不需要其他信息和文字。",
     )
@@ -93,7 +93,7 @@ def create_search_agent():
 async def main():  # 1. 包成异步函数
     '''search_result = common_search("123")
     print(search_result)'''
-    search_agent = create_search_agent()
+    search_agent = create_analysis_agent()
     result = await search_agent.run(task="搜索今天a股股价最高的白酒企业的股票")
     print(result)
 
