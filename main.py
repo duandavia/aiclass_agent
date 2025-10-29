@@ -3,6 +3,7 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_core.memory import ListMemory
 from autogen_core.models import ModelFamily
+from autogen_agentchat.base import TaskResult
 import os
 from dotenv import load_dotenv
 import asyncio
@@ -21,7 +22,7 @@ os.environ['HTTPS_PROXY'] = proxy
 # Define a model client. You can use other model client that implements
 # the `ChatCompletionClient` interface.
 model_client = OpenAIChatCompletionClient(
-    model="deepseek-reasoner",
+    model="deepseek-chat",
     base_url="https://api.deepseek.com",
     api_key=os.getenv("Deepseek_API_KEY"),
     model_info={
@@ -44,9 +45,13 @@ OutputAgent = output_agent.create_output_agent(model_client, team_memory)
 agent_team = RoundRobinGroupChat([TaskAnalysisAgent, SearchAgent, PlottingAgent, ReportAgent, OutputAgent], max_turns=5)
 # 异步运行团队
 async def test_team():
-    eg_task = "搜索港股今天市值最高的科技类股票的名称，并进行分析"
-    stream = agent_team.run_stream(task=eg_task)
-    await Console(stream=stream)
+    eg_task = "搜索港股昨天市值最高的科技类股票的名称，并进行分析"
+    async for message in agent_team.run_stream(task=eg_task):
+        if isinstance(message, TaskResult):
+            print(f"流程终止，终止原因：{message.stop_reason}")
+        else:
+            print(message)
+    # await Console(stream=stream)
     await model_client.close()
 
 if __name__ == "__main__":
