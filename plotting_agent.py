@@ -122,6 +122,7 @@ def analyze_stock(ticker: str) -> dict:
         plot_path = os.path.join(output_dir, plot_filename)
         
         plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        plt.savefig('frontend_figure.png', dpi=300, bbox_inches='tight')
         plt.close()
 
         print(f"图表已保存到: {plot_path}")
