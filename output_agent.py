@@ -43,8 +43,6 @@ def save_report(
         html_content = generate_html_report(stock_data, chart_data, analysis_content)
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(html_content)
-        with open('frontend_content.html', 'w', encoding='utf-8') as f:
-            f.write(html_content)
 
     else:  # markdown格式
         filename += ".md"
@@ -53,8 +51,6 @@ def save_report(
         # 生成Markdown报告
         md_content = generate_markdown_report(stock_data, chart_data, analysis_content)
         with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(md_content)
-        with open('frontend_content.md', 'w', encoding='utf-8') as f:
             f.write(md_content)
 
     print(f"报告已保存到: {filepath}")

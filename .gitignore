@@ -11,3 +11,4 @@ pip-log.txt
 pip-delete-this-directory.txt
 frontend_content.*
 frontend_figure.png
+__pycache__/output_agent.cpython-312.pyc
