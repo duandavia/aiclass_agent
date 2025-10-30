@@ -270,7 +270,7 @@
             word-break: break-word;
             line-height: 1.4;
         }
-        
+        /* 智能体结果有内容时的样式*/
         .agent-result.has-content {
             background-color: #e3f2fd;
             border-left: 3px solid #3498db;
@@ -543,28 +543,24 @@
                 <div class="agent-card" id="taskAgentCard">
                     <div class="agent-header">
                         <span class="agent-title">任务解析智能体</span>
-                        <span class="agent-status" id="taskAgentStatus">等待中</span>
                     </div>
                     <div class="agent-result" id="taskAgentResult"></div>
                 </div>
                 <div class="agent-card" id="searchAgentCard" >
                     <div class="agent-header">
                         <span class="agent-title">搜索智能体</span>
-                        <span class="agent-status" id="searchAgentStatus">等待中</span>
                     </div>
                     <div class="agent-result" id="searchAgentResult"></div>
                 </div>
                 <div class="agent-card" id="chartAgentCard" >
                     <div class="agent-header">
                         <span class="agent-title">制图智能体</span>
-                        <span class="agent-status" id="chartAgentStatus">等待中</span>
                     </div>
                     <div class="agent-result" id="chartAgentResult"></div>
                 </div>
                 <div class="agent-card" id="commentAgentCard" >
                     <div class="agent-header">
                         <span class="agent-title">评论智能体</span>
-                        <span class="agent-status" id="commentAgentStatus">等待中</span>
                     </div>
                     <div class="agent-result" id="commentAgentResult"></div>
                 </div>
@@ -572,10 +568,10 @@
             </div>
         </div>
 
-        <!-- 折线图区域 -->
+        <!-- 折线图区域
         <div class="chart-section">
             <img id="stockChart" alt="股票图表" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
-        </div>
+        </div> -->
 
         <!-- 评论区域 -->
         <div class="comment-section">
@@ -633,54 +629,125 @@
 
         // 生成结果函数
         let es = null;
-            function generateResult() {
-                // 清空和重置
-                resetAgentsStatus();
+        function generateResult() {
+            // 重置 UI
+            resetAgentsStatus();
         
-                const progressEl = document.getElementById('progress');
-                const userInputEl = document.getElementById('userInput');
+            const progressEl = document.getElementById('progress');
+            const userInputEl = document.getElementById('userInput');
         
-                // 清除旧的错误提示
-                if (userInputEl) {
-                    userInputEl.classList.remove('error');
-                    const prevError = userInputEl.parentNode.querySelector('.error-message');
-                    if (prevError) prevError.remove();
+            // 清理旧错误
+            if (userInputEl) {
+                userInputEl.classList.remove('error');
+                const prevError = userInputEl.parentNode.querySelector('.error-message');
+                if (prevError) prevError.remove();
+            }
+        
+            const taskText = (userInputEl?.value || '').trim();
+            if (!taskText) {
+                showError('userInput', '请输入任务内容');
+                return;
+            }
+        
+            // 关闭旧的流
+            if (es) {
+                try { es.close(); } catch {}
+                es = null;
+            }
+        
+            if (progressEl) progressEl.textContent = '正在提交任务...';
+            const apiBase = window.location.origin;
+        
+            // 提交任务
+            fetch(`${apiBase}/api/tasks`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ task: taskText })
+            })
+            .then(async (res) => {
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || `提交任务失败(${res.status})`);
                 }
+                return res.json();
+            })
+            .then(({ taskId }) => {
+                if (progressEl) progressEl.textContent = '任务已提交，开始接收实时结果...';
         
-                const taskText = (userInputEl?.value || '').trim();
-                if (!taskText) {
-                    showError('userInput', '请输入任务内容');
-                    return;
-                }
+                // 建立 SSE
+                es = new EventSource(`${apiBase}/api/tasks/${taskId}/stream`);
         
-                // 关闭上一次的流
-                if (es) {
+                // 任务解析智能体
+                es.addEventListener('taskAgent', (e) => {
+                    const data = JSON.parse(e.data);
+                    updateAgentStatus('taskAgent', '运行中', data.result);
+                });
+        
+                // 搜索智能体
+                es.addEventListener('searchAgent', (e) => {
+                    const data = JSON.parse(e.data);
+                    updateAgentStatus('searchAgent', '运行中', data.result);
+                });
+        
+                // 制图智能体
+                es.addEventListener('chartAgent', (e) => {
+                    const data = JSON.parse(e.data);
+                    updateAgentStatus('chartAgent', '运行中', data.result);
+                    const chartEl = document.getElementById('stockChart');
+                    if (chartEl) {
+                        const v = data.result;
+                        if (typeof v === 'string' && (v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://'))) {
+                            chartEl.setAttribute('src', v);
+                            chartEl.setAttribute('alt', '股票图表');
+                        }
+                    }
+                });
+        
+                // 评论智能体
+                es.addEventListener('commentAgent', (e) => {
+                    const data = JSON.parse(e.data);
+                    updateAgentStatus('commentAgent', '运行中', data.result);
+                    const commentEl = document.getElementById('comment');
+                    if (commentEl) {
+                        if (typeof data.result === 'string') {
+                            commentEl.value = data.result;
+                        } else {
+                            try {
+                                commentEl.value = JSON.stringify(data.result, null, 2);
+                            } catch {
+                                commentEl.value = String(data.result);
+                            }
+                        }
+                    }
+                });
+        
+                // 完成事件
+                es.addEventListener('done', (e) => {
+                    updateAgentStatus('taskAgent', '完成', '', '');
+                    updateAgentStatus('searchAgent', '完成', '', '');
+                    updateAgentStatus('chartAgent', '完成', '', '');
+                    updateAgentStatus('commentAgent', '完成', '', '');
+                    if (progressEl) progressEl.textContent = '分析完成';
                     try { es.close(); } catch {}
                     es = null;
-                }
-        
-                if (progressEl) progressEl.textContent = '正在提交任务...';
-                const apiBase = window.location.origin;
-                // 提交任务到后端
-                fetch(`${apiBase}/api/tasks`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ task: taskText })
-                })
-                .then(res => {
-                    if (!res.ok) throw new Error(`提交失败（${res.status}）`);
-                    return res.json();
-                })
-                .then(data => {
-                    const taskId = data.taskId || data.id;
-                    if (!taskId) throw new Error('后端未返回 taskId');
-                    if (progressEl) progressEl.textContent = `任务已创建：${taskId}，开始接收流...`;
-                    startSSE(taskId, apiBase);
-                })
-                .catch(err => {
-                    if (progressEl) progressEl.textContent = `错误：${err.message}`;
                 });
-            }
+        
+                // 错误处理（服务器断流或网络异常）
+                es.onerror = (err) => {
+                    updateAgentStatus('taskAgent', '失败', '', '');
+                    updateAgentStatus('searchAgent', '失败', '', '');
+                    updateAgentStatus('chartAgent', '失败', '', '');
+                    updateAgentStatus('commentAgent', '失败', '', '');
+                    if (progressEl) progressEl.textContent = '流连接出现错误或中断';
+                    try { es.close(); } catch {}
+                    es = null;
+                };
+            })
+            .catch((err) => {
+                if (progressEl) progressEl.textContent = '';
+                showError('userInput', err.message || '请求失败');
+            });
+        }
 
             function startSSE(taskId, apiBase) {
                 const progressEl = document.getElementById('progress');
@@ -695,19 +762,19 @@
                 });
         
                 // 任务解析智能体
-                es.addEventListener('taskAgent', (ev) => {
+                es.addEventListener('Task_Analysis_Agent', (ev) => {
                     const payload = safeParse(ev.data);
                     updateAgentStatus('taskAgent', toCNStatus(payload.status), payload.result ?? '');
                 });
         
                 // 搜索智能体
-                es.addEventListener('searchAgent', (ev) => {
+                es.addEventListener('Search_Agent', (ev) => {
                     const payload = safeParse(ev.data);
                     updateAgentStatus('searchAgent', toCNStatus(payload.status), payload.result ?? '');
                 });
         
                 // 制图智能体
-                es.addEventListener('chartAgent', (ev) => {
+                es.addEventListener('Plotting_Agent', (ev) => {
                     const payload = safeParse(ev.data);
                     updateAgentStatus('chartAgent', toCNStatus(payload.status), payload.result ?? '');
                     if (payload.imageUrl && chartEl) {
@@ -717,7 +784,7 @@
                 });
         
                 // 评论智能体（最后一个智能体）
-                es.addEventListener('commentAgent', (ev) => {
+                es.addEventListener('Report_Agent', (ev) => {
                     const payload = safeParse(ev.data);
                     updateAgentStatus('commentAgent', toCNStatus(payload.status), payload.result ?? '');
                     if (commentEl) {
